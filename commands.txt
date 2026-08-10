@@ -1,0 +1,166 @@
+# ========================================
+# PART 1: PROJECT SETUP
+# ========================================
+
+# 1. Activate virtual environment
+venv\Scripts\activate
+
+# 2. Install requirements
+pip install -r requirements.txt
+
+# 3. Make migrations
+python manage.py makemigrations
+
+# 4. Apply migrations
+python manage.py migrate
+
+# 5. Create cache table
+python manage.py createcachetable
+
+
+# ========================================
+# PART 2: IMPORT DATA
+# ========================================
+
+# 6. Import fuel stations from CSV
+python manage.py import_stations --csv data/fuel-prices-for-be-assessment.csv --clear --skip-geocode
+
+
+# ========================================
+# PART 3: CHECK DATABASE STATUS
+# ========================================
+
+# 7. Check how many stations are geocoded
+python manage.py shell -c "from core.models import FuelStation; total=FuelStation.objects.count(); geocoded=FuelStation.objects.filter(latitude__isnull=False).count(); ungeocoded=FuelStation.objects.filter(latitude__isnull=True).count(); print(f'Total: {total}, Geocoded: {geocoded}, Ungeocoded: {ungeocoded}')"
+
+
+# ========================================
+# PART 4: GEOCODE STATIONS (Run Multiple Times)
+# ========================================
+
+# 8. Geocode first batch (50 stations)
+python manage.py geocode_stations --limit 50
+
+# 9. Geocode second batch (50 more)
+python manage.py geocode_stations --limit 50
+
+# 10. Geocode by state (New York)
+python manage.py geocode_stations --state NY --limit 50
+
+# 11. Geocode by state (New Jersey)
+python manage.py geocode_stations --state NJ --limit 50
+
+# 12. Geocode by state (Pennsylvania)
+python manage.py geocode_stations --state PA --limit 50
+
+# 13. Geocode by state (Maryland)
+python manage.py geocode_stations --state MD --limit 50
+
+# 14. Geocode by state (DC)
+python manage.py geocode_stations --state DC --limit 50
+
+
+# ========================================
+# PART 5: CHECK GEOCODING PROGRESS
+# ========================================
+
+# 15. Check geocoded stations again
+python manage.py shell -c "from core.models import FuelStation; total=FuelStation.objects.count(); geocoded=FuelStation.objects.filter(latitude__isnull=False).count(); ungeocoded=FuelStation.objects.filter(latitude__isnull=True).count(); print(f'Total: {total}, Geocoded: {geocoded}, Ungeocoded: {ungeocoded}')"
+
+# 16. Check stations along the route (NY-DC)
+python manage.py shell -c "from core.models import FuelStation; route_states=['NY','NJ','PA','MD','DC']; stations=FuelStation.objects.filter(state__in=route_states, latitude__isnull=False); print(f'Stations along NY-DC route: {stations.count()}')"
+
+
+# ========================================
+# PART 8: TEST THE API
+# ========================================
+
+# 18. Start the server
+python manage.py runserver
+
+# 19. In BROWSER - GET request (URL to copy)
+# http://127.0.0.1:8000/api/health/
+
+# 20. In BROWSER - GET request (URL to copy)
+# http://127.0.0.1:8000/api/optimize/?start=New%20York,%20NY&finish=Washington,%20DC
+
+# 21. In POSTMAN - POST request (JSON to copy)
+{
+    "start": "New York, NY",
+    "finish": "Washington, DC"
+}
+
+# 22. In POSTMAN - POST request (JSON to copy)
+{
+    "start": "Chicago, IL",
+    "finish": "Denver, CO"
+}
+
+# 23. In POSTMAN - POST request (JSON to copy)
+{
+    "start": "New York, NY",
+    "finish": "Los Angeles, CA"
+}
+
+
+# ========================================
+# PART 8: TEST DIFFERENT ROUTES
+# ========================================
+
+# 24. Test Route: San Francisco to Los Angeles
+# GET: http://127.0.0.1:8000/api/optimize/?start=San%20Francisco,%20CA&finish=Los%20Angeles,%20CA
+# POST: {"start": "San Francisco, CA", "finish": "Los Angeles, CA"}
+
+# 25. Test Route: Miami to Orlando
+# GET: http://127.0.0.1:8000/api/optimize/?start=Miami,%20FL&finish=Orlando,%20FL
+# POST: {"start": "Miami, FL", "finish": "Orlando, FL"}
+
+# 26. Test Route: Chicago to New York
+# GET: http://127.0.0.1:8000/api/optimize/?start=Chicago,%20IL&finish=New%20York,%20NY
+# POST: {"start": "Chicago, IL", "finish": "New York, NY"}
+
+
+# ========================================
+# PART 9: HELPFUL COMMANDS
+# ========================================
+
+# 27. Show all stations count by state
+python manage.py shell -c "from core.models import FuelStation; from django.db.models import Count; states=FuelStation.objects.values('state').annotate(count=Count('id')).order_by('-count'); print('Stations by state:'); [print(f'{s[\"state\"]}: {s[\"count\"]}') for s in states[:10]]"
+
+# 28. Show geocoded stations by state
+python manage.py shell -c "from core.models import FuelStation; from django.db.models import Count; states=FuelStation.objects.filter(latitude__isnull=False).values('state').annotate(count=Count('id')).order_by('-count'); print('Geocoded stations by state:'); [print(f'{s[\"state\"]}: {s[\"count\"]}') for s in states[:10]]"
+
+# 29. Show stations near a specific route
+python manage.py shell -c "from core.models import FuelStation; route_states=['NY','NJ','PA','MD','DC','DE','VA']; stations=FuelStation.objects.filter(state__in=route_states, latitude__isnull=False); print(f'Stations along NY-DC route: {stations.count()}')"
+
+# 30. Clear all stations (WARNING: This deletes all data)
+# python manage.py import_stations --clear
+
+# 31. Create superuser for admin panel
+# python manage.py createsuperuser
+
+# 32. Open admin panel
+# http://127.0.0.1:8000/admin/
+
+
+# ========================================
+# PART 10: TROUBLESHOOTING
+# ========================================
+
+# If geocoding fails with 429 error (rate limited):
+# Wait 5 minutes and try again with smaller batch
+python manage.py geocode_stations --limit 20
+
+# If routing fails with 401 error:
+# Check your API key in settings.py
+# ORS_API_KEY = 'your_api_key_here'
+
+# If no stations found on route:
+# Geocode more stations along that route
+python manage.py geocode_stations --state CA --limit 100
+
+# Check if Django is running:
+python manage.py check
+
+# See detailed logs:
+python manage.py runserver --verbosity 3
