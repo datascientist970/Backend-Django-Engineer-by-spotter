@@ -417,8 +417,7 @@ POST http://127.0.0.1:8000/api/optimize/
 ```
 
 ## 🎬 Project Demo
-
-[Link to Loom Video]([your-loom-link-here](https://www.loom.com/share/f3dc9ddc9cf04d218bc62865b3146bac))
+https://www.loom.com/share/f3dc9ddc9cf04d218bc62865b3146bac
 
 The demo covers:
 1. Project setup and installation
